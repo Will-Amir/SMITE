@@ -208,7 +208,7 @@ function run = SCIFI_initialise_clean(runcontrol)
     end
 
     %%%%%%% load INTERPSTACK
-    load( 'forcings/INTERPSTACK_oct_2021.mat' ) ;
+    load( 'forcings/INTERPSTACK_CORE.mat' ) ;
 
     %%%%%%% relative contribution from latitude bands
     lat_areas = (cosd(INTERPSTACK.lat))' ;
