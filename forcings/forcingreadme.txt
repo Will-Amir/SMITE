@@ -1,0 +1,1 @@
+--- Forcings are required base files necessary for SMITE to run; these include forcings for land area, wildfire regions and more
