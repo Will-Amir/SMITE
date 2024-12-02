@@ -348,18 +348,27 @@ if seeding_primer == 0
     biomass_bor_future=workingstate.biomass;
     biomass_tro_future=workingstate.biomass;
 else
-    biomass_tem_past( :, :, 1 ) = 2.5e4*land_past;%.*culledmaterial ; 
-    biomass_tem_past( biomass_tem_past == 0 ) = NaN ; 
-    biomass_bor_past( :, :, 1 ) = 2.5e4*land_past;%.*culledmaterial ; 
-    biomass_bor_past( biomass_bor_past == 0 ) = NaN ; 
-    biomass_tro_past( :, :, 1 ) = 2.5e4*land_past;%.*culledmaterial ; 
-    biomass_tro_past( biomass_tro_past == 0 ) = NaN ;  
-    biomass_tem_future( :, :, 1 ) = 2.5e4*land_future;%.*culledmaterial ; 
-    biomass_tem_future( biomass_tem_future == 0 ) = NaN ; 
-    biomass_bor_future( :, :, 1 ) = 2.5e4*land_future;%.*culledmaterial ; 
-    biomass_bor_future( biomass_bor_future == 0 ) = NaN ; 
-    biomass_tro_future( :, :, 1 ) = 2.5e4*land_future;%.*culledmaterial ; 
-    biomass_tro_future( biomass_tro_future == 0 ) = NaN ;
+    if (t_geol*1e6)>pars.whenstart
+        biomass_tem_past=workingstate.biomass;
+        biomass_bor_past=workingstate.biomass;
+        biomass_tro_past=workingstate.biomass;
+        biomass_tem_future=workingstate.biomass;
+        biomass_bor_future=workingstate.biomass;
+        biomass_tro_future=workingstate.biomass;
+    else
+        biomass_tem_past( :, :, 1 ) = 2.5e4*land_past;%.*culledmaterial ; 
+        biomass_tem_past( biomass_tem_past == 0 ) = NaN ; 
+        biomass_bor_past( :, :, 1 ) = 2.5e4*land_past;%.*culledmaterial ; 
+        biomass_bor_past( biomass_bor_past == 0 ) = NaN ; 
+        biomass_tro_past( :, :, 1 ) = 2.5e4*land_past;%.*culledmaterial ; 
+        biomass_tro_past( biomass_tro_past == 0 ) = NaN ;  
+        biomass_tem_future( :, :, 1 ) = 2.5e4*land_future;%.*culledmaterial ; 
+        biomass_tem_future( biomass_tem_future == 0 ) = NaN ; 
+        biomass_bor_future( :, :, 1 ) = 2.5e4*land_future;%.*culledmaterial ; 
+        biomass_bor_future( biomass_bor_future == 0 ) = NaN ; 
+        biomass_tro_future( :, :, 1 ) = 2.5e4*land_future;%.*culledmaterial ; 
+        biomass_tro_future( biomass_tro_future == 0 ) = NaN ;
+    end
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%   Calculating Biomass   %%%%%%%%%%%%%%%%%%%%%%%%%
