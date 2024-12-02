@@ -1,10 +1,8 @@
-# SMITE
-Sudden Magnitudinous Impactor Triggered Evolution model
--------------------------------------------------------
-This model acts as an additional module for the SCION code, serving to inject extraterrestrial impacts into the SCION/SCI-FI model; from here, extent of damage is analysed so as to investigate how these impact events alter a planet's evolution
+# SCI-FI (SCION-FLORA INTEGRATION)
+FLORA (Gurung et al., 2022) can be found at www.github.com/KhushGrg/FLORA
 
-The files included here should replace files of the same name within the SCI-FI model; SCI-FI can be found at https://github.com/KhushGrg/SCI-FI (thanks to K. Gurung, 2024 and B.J. Mills, 2019)
+SCION (Mills et al., 2019) can be found at www.github.com/bjwmills/SCION
 
-The forcing file INTERPSTACK_CORE must be placed within the forcings folder, but does not replace existing forcings
+Requires MATLAB. Published with <a href="https://link.springer.com/article/10.1038/s41467-024-46105-1?utm_source=rct_congratemailt&utm_medium=email&utm_campaign=oa_20240228&utm_content=10.1038/s41467-024-46105-1)https://link.springer.com/article/10.1038/s41467-024-46105-1?utm_source=rct_congratemailt&utm_medium=email&utm_campaign=oa_20240228&utm_content=10.1038/s41467-024-46105-1">Gurung et al., 2024</a>
 
-m_map must be included to run SMITE and SCI-FI; m_map can be found at https://www-old.eoas.ubc.ca/~rich/map.html (thanks to Pawlowicz, R., 2020)
+Please email k.gurung@leeds.ac.uk for further questions. 
