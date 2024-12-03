@@ -3,7 +3,6 @@
 global asteroidtimes
 global biopars
 global culledmaterial
-global SMITEflag
 if random_impactor_flag==1
     lats = zeros(1,length(asteroidtimes)) ;
     longs = zeros(1,length(asteroidtimes)) ;

@@ -47,7 +47,6 @@ function run = SCIFI_initialise_clean(runcontrol)
     global numasteroids
     global timetoinject
     global culledmaterial
-    global SMITEflag
     global seeding_primer
     
     %%%%%%% global tuning variables
@@ -292,7 +291,6 @@ function run = SCIFI_initialise_clean(runcontrol)
         lats=[19]; %Choose asteroid latitudes
         longs=[13]; %Choose asteroid longitudes
         powers=[100]; %Choose asteroid powers
-        SMITEflag=0;
         culledmaterial = ones(40,48) ;
         timetoinject=asteroidtimes(1);
     else
@@ -301,7 +299,7 @@ function run = SCIFI_initialise_clean(runcontrol)
     end
     
     %%% Set seeding_primer to 0 for carrying forward biomass and 1 for reseeding
-    seeding_primer=1;
+    seeding_primer=0;
 
     %%%%%%% setp up grid stamp times
     if runcontrol == -2
@@ -397,158 +395,21 @@ function run = SCIFI_initialise_clean(runcontrol)
     pars.startstate(19) = pars.OSr_start * pars.delta_OSr_start ;
     pars.startstate(20) = pars.SSr_start ;
     pars.startstate(21) = pars.SSr_start * pars.delta_SSr_start ;
-
-    if seeding_primer == 0
-        %%%%%%% initial FLORA running
-        CO2ppm=18;
-        timestart=18;
-        mrO2 = ( pars.startstate(2)/pars.O0 )  /   ( (pars.startstate(2)/pars.O0)  + pars.copsek16 ) ;
-        pO2 =mrO2*1000;
-        timestartgeol=INTERPSTACK.time(timestart);
-        Tair_past = INTERPSTACK.Tair(:,:,CO2ppm,timestart) ; 
-        RUNOFF_past = INTERPSTACK.runoff(:,:,CO2ppm,timestart) ; 
-        land_past = circshift(INTERPSTACK.land(:,:,timestart), [0 0]); 
-        GRID_AREA_m2 = INTERPSTACK.gridarea(:,:)*1e6 ; 
-        %setup
-        dt = 1 ;
-        % Longitude and latitude 
-        x_lon = 48 ; 
-        y_lat = 40 ;
-        
-        % Photosynthesis parameters (taken from LPJ model)
-        t25 = 2600 ; 
-        q_10t = 0.57 ; 
-        v = 0.7 ; 
-        kc25 = 30 ; 
-        ko25 = 3e4 ; 
-        q_10c = 2.1 ; 
-        q_10o = 1.2 ; 
-        s = (24/12) * 0.015 ; %0.08 in Github for C3 plants
-        alpha = 0.08 ; 
-        theta = 0.7 ; 
-        lr_max = 0.75 ; 
-        CN_leaf = 29 ;
-        % Tissue respiration rate at 10 degree C
-        r_tem = 0.055 * 365 ; % gC/gN/d -> gC/gN/year
-        r_bor = 0.066 * 365 ;
-        r_tro = 0.011 * 365 ; 
-        % Growth respiraition
-        R_growth = 0.25 ;     
-        % Leaf longevity; ranges from 0.5 - 1 depending on type of plant
-        life_leaf_tem = 0.75 ; 
-        life_leaf_bor = 0.75 ;
-        life_leaf_tro = 1 ; 
-        % Minimum weathering
-        minbiota = 0.32 ; 
-        % Insolation parameter
-        ins_present = 150 + 250 .* normpdf( INTERPSTACK.lat', 0 , 80 ) ./ normpdf( 0, 0, 80 ) .* ones( y_lat, x_lon) ; 
-        
-        
-        %%%%%%% Insolation
-        ins = ins_present - ( ins_present * 4.6/100 * ( abs( timestartgeol )/570 ) ) ; 
-        
-        %%%%%%% Ice (< -10 degC) or no runoff = no biomass 
-        Tair_ice_past = Tair_past ; 
-        Tair_ice_past( Tair_ice_past < -10 ) = NaN ;
-        RUNOFF_past(RUNOFF_past == 0 | isnan(RUNOFF_past)) = NaN ; 
-        RUNOFF_past = 1 - (1 ./ ( 1 + exp(0.005 .* (RUNOFF_past - 450)))) ;
-        
-        %%%%%%% Photosynthesis calculation for the past keyframe
-        tf = t25 * ( q_10t .^ ( ( Tair_ice_past - 25 ) * 0.1 ) ) ; 
-        tstar = pO2 ./ ( 2 * tf ) ; 
-        
-        pi = v * CO2ppm ; 
-        
-        kc = kc25 * ( q_10c .^ ( ( Tair_ice_past - 25 ) * 0.1 ) ) ; 
-        ko = ko25 * ( q_10o .^ ( ( Tair_ice_past - 25 ) * 0.1 ) ) ; 
-        
-        c2 = ( pi - tstar ) ./ ( pi + kc .* ( 1 + ( pO2 ./ ko ) ) ) ; 
-        
-        ftemp_tem = normpdf( Tair_ice_past, 15,7 ) ; % 15, 7 ) ; % Temperate 
-        ftemp_bor = normpdf( Tair_ice_past, 0, 20 ) ; %5, 10 ) ; % Boreal 
-        ftemp_tro = normpdf( Tair_ice_past, 27, 7 ) ; % 27, 3 ) ;  % Tropical 
-        
-        c1_tem = alpha * ftemp_tem .* ( ( pi - tstar ) ./ ( pi + 2 * tstar ) ) ;
-        c1_bor = alpha * ftemp_bor .* ( ( pi - tstar ) ./ ( pi + 2 * tstar ) ) ; 
-        c1_tro = alpha * ftemp_tro .* ( ( pi - tstar ) ./ ( pi + 2 * tstar ) ) ;
-        
-        sigma = ( 1 - ( ( c2 - s ) ./ ( c2 - theta * s ) ) ) .^ 0.5 ; 
-        
-        g_T_past = exp( 308.56 .* ( ( 1 / 56.02 ) - ( 1 ./ ( Tair_ice_past + 46.02 ) ) ) ) ;
-        
-        photosynth_tem_past = 10 .* 365 * ins .* ( c1_tem ./ c2 ) .* ( c2 - ( ( ( 2 * theta ) -1 ) * s ) - ( 2 .* ( c2 - ( theta .* s ) ) .* sigma ) ) .* RUNOFF_past ; 
-        photosynth_bor_past = 10 .* 365 * ins .* ( c1_bor ./ c2 ) .* ( c2 - ( ( ( 2 * theta ) -1 ) * s ) - ( 2 .* ( c2 - ( theta .* s ) ) .* sigma ) ) .* RUNOFF_past ; 
-        photosynth_tro_past = 10 .* 365 * ins .* ( c1_tro ./ c2 ) .* ( c2 - ( ( ( 2 * theta ) -1 ) * s ) - ( 2 .* ( c2 - ( theta .* s ) ) .* sigma ) ) .* RUNOFF_past ; 
-        
-        %%%%%%% Carbon in leaf allocation - first timestep
-        C_leaf_tem_past = lr_max .* photosynth_tem_past ; 
-        C_leaf_bor_past = lr_max .* photosynth_bor_past ;
-        C_leaf_tro_past = lr_max .* photosynth_tro_past ; 
-        
-        %%%%%%% Biomass starting at homogenous values
-        biomass_tem_past( :, :, 1 ) = 2.5e1 * land_past ; 
-        biomass_tem_past( biomass_tem_past == 0 ) = NaN ; 
-        biomass_bor_past( :, :, 1 ) = 2.5e1 * land_past ; 
-        biomass_bor_past( biomass_bor_past == 0 ) = NaN ; 
-        biomass_tro_past( :, :, 1 ) = 2.5e1 * land_past ; 
-        biomass_tro_past( biomass_tro_past == 0 ) = NaN ; 
-        
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        %%%%%%%%%%%%%%%%%%%%%%   Calculating Biomass   %%%%%%%%%%%%%%%%%%%%%%%%%
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        
-        %%%%%%% Stopping at <1% change in biomass
-        
-        biomass_change_final_step(1) = 999 ; 
-        n = 1 ; 
-        
-        %%%%%%% Turnover changes between 8% and 20% depending on O2
-        turnover = min( max( 0.0092 *( (pO2/1000) - 10 ), 0.08 ), 0.2 ) ; 
-        
-        while abs( biomass_change_final_step ) > 1 
-        
-            %%% Leaf respiration per plant type
-            R_leaf_tem_past = r_tem * ( C_leaf_tem_past / CN_leaf ) .* g_T_past ;
-            R_leaf_bor_past = r_bor * ( C_leaf_bor_past / CN_leaf ) .* g_T_past ;
-            R_leaf_tro_past = r_tro * ( C_leaf_tro_past / CN_leaf ) .* g_T_past ;
-            R_leaf_tem_past( R_leaf_tem_past <= 0 ) = 0 ; 
-            R_leaf_bor_past( R_leaf_bor_past <= 0 ) = 0 ; 
-            R_leaf_tro_past( R_leaf_tro_past <= 0 ) = 0 ; 
-        
-            %%% NPP
-            NPP_tem_past = ( 1 - R_growth ) .* ( photosynth_tem_past - R_leaf_tem_past ) ; 
-            NPP_bor_past = ( 1 - R_growth ) .* ( photosynth_bor_past - R_leaf_bor_past ) ; 
-            NPP_tro_past = ( 1 - R_growth ) .* ( photosynth_tro_past - R_leaf_tro_past ) ; 
-          
-        
-            %%% Biomass
-            biomass_tem_past = biomass_tem_past + ( C_leaf_tem_past - turnover * biomass_tem_past) * dt ; 
-            biomass_bor_past = biomass_bor_past + ( C_leaf_bor_past - turnover * biomass_bor_past ) * dt ; 
-            biomass_tro_past = biomass_tro_past+ ( C_leaf_tro_past - turnover * biomass_tro_past ) * dt ; 
-            
-            final_biomass_past = max( biomass_tem_past, max( biomass_bor_past, biomass_tro_past ) ) ;
-        
-            %%% Carbon in leaf allocation (n+1)
-            C_leaf_tem_past = ( C_leaf_tem_past .* ( 1 - life_leaf_tem ) ) + ( lr_max .* NPP_tem_past ) ;
-            C_leaf_bor_past = ( C_leaf_bor_past .* ( 1 - life_leaf_bor ) ) + ( lr_max .* NPP_bor_past ) ;
-            C_leaf_tro_past = ( C_leaf_tro_past .* ( 1 - life_leaf_tro ) ) + ( lr_max .* NPP_tro_past ) ;
-        
-        
-            %%% Biomass total (gC/m2)
-            biomass_tot( n + 1 ) = sum( sum( final_biomass_past .* ( GRID_AREA_m2), 'omitnan' ) ) ; 
-            biomass_change_final_step = ( ( biomass_tot( n + 1 ) - biomass_tot( n ) ) / biomass_tot( n + 1 ) ) * 100 ; 
-        
-            n = n + 1 ; 
-        end
-        
-        workingstate.biomass=final_biomass_past;
-    end
+    
+    
     %%%%%%% note model start time
     tic
 
     %%%%%%% run the system 
     [rawoutput.T,rawoutput.Y] = ode15s(@SCIFI_equations2,[pars.whenstart pars.whenend],pars.startstate,options);
-
+    
+    if runcontrol==-3
+        FLORA_test
+            run.singlerun = singlerun ; 
+            run.pars = pars ;
+            run.forcings = forcings ;
+    end
+    
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%   Postprocessing   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
