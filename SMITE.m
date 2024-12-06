@@ -58,8 +58,8 @@ truefires(potentialfires==0 & land_past==1)=0;
 
 %Reduces biomass due to asteroid impact & effects
 culledmaterial(land_past==1)=1;
-culledmaterial(truefires==1 & struck==0)=0.4;
-culledmaterial(struck==1 & truefires==1)=0.2;
+culledmaterial(truefires==1 & struck==0)=0.1;
+culledmaterial(struck==1 & truefires==1)=0.01;
 culledmaterial(land_past==0)=0;
 
 %Maps wildfires

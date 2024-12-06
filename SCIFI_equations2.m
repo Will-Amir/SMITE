@@ -33,6 +33,8 @@ global timetoinject
 global culledmaterial
 global seeding_primer
 global CO2ppm
+global biohistories
+global biotimes
 
 %%%%%%% get variables from Y to make working easier
 P = y(1) ;
@@ -236,7 +238,7 @@ else
     end
 end
 if t_geol>=timetoinject
-    currentcull=culledmaterial;
+   currentcull=culledmaterial;
    toadd=abs((t_geol-timetoinject))/2;
    currentcull(culledmaterial~=0)=currentcull(culledmaterial~=0)+toadd;
    currentcull(currentcull>1)=1;
@@ -345,12 +347,15 @@ C_leaf_tro_future( :, :, 1 ) = biopars.lr_max .* photosynth_tro_future ;
 %%%%%%% Seeding initial biomass starting at homogenous values
 if seeding_primer == 0
     if (t_geol*1e6)>pars.whenstart
-        biomass_tem_past=workingstate.biomass;
-        biomass_bor_past=workingstate.biomass;
-        biomass_tro_past=workingstate.biomass;
-        biomass_tem_future=workingstate.biomass;
-        biomass_bor_future=workingstate.biomass;
-        biomass_tro_future=workingstate.biomass;
+        prevtimes=biotimes<t_geol;
+        recenttime=find(prevtimes==max(prevtimes));
+        prevstate=biohistories(recenttime);
+        biomass_tem_past=prevstate;
+        biomass_bor_past=prevstate;
+        biomass_tro_past=prevstate;
+        biomass_tem_future=prevstate;
+        biomass_bor_future=prevstate;
+        biomass_tro_future=prevstate;
     else
         biomass_tem_past( :, :, 1 ) = 2.5e1*land_past;
         biomass_tem_past( biomass_tem_past == 0 ) = NaN ; 
@@ -480,19 +485,22 @@ f_biota_future = 0.0005 * NPP_future * EVO + ( biopars.minbiota * RCO2 ^ 0.25 ) 
 
 if (t_geol*1.005<=timetoinject)&&(t_geol*0.9995>=timetoinject)
     burntmaterial=(workingstate.biomass.*(1-currentcull));
+    disp(sum(sum(burntmaterial .* ( GRID_AREA_km2 * 1e6 ), 'omitnan')))
 else
     burntmaterial=0;
 end
 f_biota_past( land_past == 1 & isnan( f_biota_past ) ) = biopars.minbiota .* RCO2 ^ 0.25  ;
 f_biota_future( land_future == 1 & isnan( f_biota_future ) ) = biopars.minbiota .* RCO2 ^ 0.25 ; 
-workingstate.biomass=final_biomass_past;
+biohistories=[biohistories;final_biomass_past];
+biotimes=[biotimes,t_geol];
+
 %%%%%%% Mass of biosphere
 VEG = biomass_tot( end ) / 4.53e17 ; 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%   SMITE CONTINUED   %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-firecarbon=(sum(sum( sum( burntmaterial .* ( GRID_AREA_km2 * 1e6 ), 'omitnan' ) )));%/12;
+firecarbon=0;%((sum(sum( sum( burntmaterial .* ( GRID_AREA_km2 * 1e6 ), 'omitnan' ) )))/2400);%*interp1([pars.whenstart 1.01*timetoinject 1.005*timetoinject timetoinject 0.995*timetoinject 0.99*timetoinject pars.whenend],[0 0 0.1 1 0.1 0 0],t_geol);
 %*interp1([-70 -66.2 -66.1 -66 -65.9 -65.8 -60],[0 0 1 1 1 0 0],t_geol);
 dl13c_firecarbon=-5;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

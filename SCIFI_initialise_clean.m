@@ -26,6 +26,8 @@ function run = SCIFI_initialise_clean(runcontrol)
     clear rawoutput
     clear resample
     clear biopars
+    clear biohistories
+    clear biotimes
 
     %%%%%%% set up global structures
     global stepnumber
@@ -48,6 +50,8 @@ function run = SCIFI_initialise_clean(runcontrol)
     global timetoinject
     global culledmaterial
     global seeding_primer
+    global biohistories
+    global biotimes
     
     %%%%%%% global tuning variables
     global Gtune
@@ -290,7 +294,7 @@ function run = SCIFI_initialise_clean(runcontrol)
         asteroidtimes=[-67]; %Choose when in Myr to inject asteroids
         lats=[19]; %Choose asteroid latitudes
         longs=[13]; %Choose asteroid longitudes
-        powers=[100]; %Choose asteroid powers
+        powers=[80]; %Choose asteroid powers
         culledmaterial = ones(40,48) ;
         timetoinject=asteroidtimes(1);
     else
