@@ -12,7 +12,7 @@ function dy = SCIFI_equations2(t,y)
 %%%% model equations
 
 %%%%%%% setup dy array
-dy = zeros(21,1);  
+dy = zeros(22,1);  
 %%%%%%% set up global parameters
 global stepnumber
 global pars
@@ -32,9 +32,10 @@ global numasteroids
 global timetoinject
 global culledmaterial
 global seeding_primer
-global CO2ppm
 global biohistories
 global biotimes
+global mass
+global toburn
 
 %%%%%%% get variables from Y to make working easier
 P = y(1) ;
@@ -49,7 +50,7 @@ N = y(11) ;
 OSr = y(18) ;
 SSr = y(20) ;
 dSSr = y(21)/y(20) ;
-
+atmoA = y(22) ;
 %%%%%%% geological time in Ma
 t_geol = t*(1e-6) ;
 
@@ -61,10 +62,10 @@ delta_PYR  = y(14)/y(7);
 
 %%%%%%% atmospheric fraction of total CO2, atfrac(A)
 atfrac0 = 0.01614 ; % constant
-atfrac = atfrac0 * (A/pars.A0) ; % variable
+atfrac = atfrac0 * (atmoA/pars.atmoA0) ; % variable
 
 %%%%%%% calculations for pCO2, pO2
-RCO2 = (A/pars.A0)*(atfrac/atfrac0) ;
+RCO2 = (atmoA/pars.atmoA0)*(atfrac/atfrac0) ;
 CO2atm = RCO2*(280e-6) ;
 CO2ppm = RCO2*280 ;
 %%%%%%% mixing ratio of oxygen (not proportional to O reservoir)
@@ -218,6 +219,7 @@ TEMP_gast = Tsurf ;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%  SMITE - Sudden Magnitudinous Impactor-Triggered Evolution  %%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%{
 struck = INTERPSTACK.struck(:,:) ;
 potentialfires = INTERPSTACK.wildfires(:,:) ;
 burntmaterial = zeros(40,48) ;
@@ -226,7 +228,7 @@ if random_impactor_flag==0
     if any(asteroidtimes(:)<=t_geol)
         for time = 1:length(asteroidtimes)
             if asteroidtimes(time)<=t_geol
-                valstorun=[asteroidtimes(time),lats(time),longs(time),powers(time)];
+                valstorun=[asteroidtimes(time),lats(time),longs(time),powers(time),mass(time)];
                 SMITE
                 asteroidtimes(time)=1;
             end
@@ -237,24 +239,20 @@ else
         SMITE
     end
 end
-if t_geol>=timetoinject
-   currentcull=culledmaterial;
-   toadd=abs((t_geol-timetoinject))/2;
-   currentcull(culledmaterial~=0)=currentcull(culledmaterial~=0)+toadd;
-   currentcull(currentcull>1)=1;
-end
+%}
+currentcull=ones(40,48);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%   FLORA - Fast Land Occupant Reaction Alogrithm   %%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 %%%%%%% Insolation
 ins = biopars.ins_present - ( biopars.ins_present * 4.6/100 * ( abs( t_geol )/570 ) ) ; 
-
+surfacetemps=nthroot(ins/(5.67e-8),4)-273.25;
+%disp(surfacetemps)
 %%%%%%% Ice (< -10 degC) or no runoff = no biomass 
 Tair_ice_past = Tair_past ; 
 Tair_ice_future = Tair_future ; 
-Tair_ice_past( Tair_ice_past < -30 ) = NaN ; 
-Tair_ice_future( Tair_ice_future < -30 ) = NaN ; 
+Tair_ice_past( Tair_ice_past < -5 ) = NaN ; 
+Tair_ice_future( Tair_ice_future < -5 ) = NaN ; 
 
 % water_stress_past = zeros( biopars.x_lon, biopars.y_lat ) ; 
 % water_stress_future = zeros( biopars.x_lon, biopars.y_lat ) ; 
@@ -347,9 +345,9 @@ C_leaf_tro_future( :, :, 1 ) = biopars.lr_max .* photosynth_tro_future ;
 %%%%%%% Seeding initial biomass starting at homogenous values
 if seeding_primer == 0
     if (t_geol*1e6)>pars.whenstart
-        prevtimes=biotimes<t_geol;
-        recenttime=find(prevtimes==max(prevtimes));
-        prevstate=biohistories(recenttime);
+        prevtimes=find(biotimes<t_geol);
+        recenttime=max(prevtimes);
+        prevstate=biohistories(:,:,recenttime);
         biomass_tem_past=prevstate;
         biomass_bor_past=prevstate;
         biomass_tro_past=prevstate;
@@ -384,6 +382,11 @@ else
     biomass_tro_future( :, :, 1 ) = 2.5e4*land_future.*currentcull ; 
     biomass_tro_future( biomass_tro_future == 0 ) = NaN ;
 end
+if t_geol>=timetoinject %Time to regrow plant material as a hard limit on max possible plants
+   toadd=(t_geol-timetoinject)*1000;
+   currentcull(culledmaterial~=0)=culledmaterial(culledmaterial~=0)+toadd;
+   currentcull(currentcull>1)=1;
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%   Calculating Biomass   %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -394,7 +397,7 @@ n = 1 ;
 %%%%%%% Turnover changes between 8% and 20% depending on O2
 turnover = min( max( 0.0092 *( mrO2 * 100 - 10 ), 0.08 ), 0.2 ) ; 
 
-while abs( biomass_change_final_step ) > 0.000000000001
+while abs( biomass_change_final_step ) > 0.0000000000000001
 
     %%% Leaf respiration per plant type
     R_leaf_tem_past = biopars.r_tem * ( C_leaf_tem_past / biopars.CN_leaf ) .* g_T_past ;
@@ -411,21 +414,22 @@ while abs( biomass_change_final_step ) > 0.000000000001
     R_leaf_tro_future( R_leaf_tro_future <= 0 ) = 0 ; 
 
     %%% NPP
-    NPP_tem_past = ( 1 - biopars.R_growth ) .* ( photosynth_tem_past - R_leaf_tem_past ) .* currentcull ; 
-    NPP_bor_past = ( 1 - biopars.R_growth ) .* ( photosynth_bor_past - R_leaf_bor_past ) .* currentcull ; 
-    NPP_tro_past = ( 1 - biopars.R_growth ) .* ( photosynth_tro_past - R_leaf_tro_past ) .* currentcull ; 
-    NPP_tem_future = ( 1 - biopars.R_growth ) .* ( photosynth_tem_future - R_leaf_tem_future ) .* currentcull ;
-    NPP_bor_future = ( 1 - biopars.R_growth ) .* ( photosynth_bor_future - R_leaf_bor_future ) .* currentcull ;
-    NPP_tro_future = ( 1 - biopars.R_growth ) .* ( photosynth_tro_future - R_leaf_tro_future ) .* currentcull ;
+    NPP_tem_past = ( 1 - biopars.R_growth ) .* ( photosynth_tem_past - R_leaf_tem_past ) .* currentcull; 
+    NPP_bor_past = ( 1 - biopars.R_growth ) .* ( photosynth_bor_past - R_leaf_bor_past ) .* currentcull; 
+    NPP_tro_past = ( 1 - biopars.R_growth ) .* ( photosynth_tro_past - R_leaf_tro_past ) .* currentcull; 
+    NPP_tem_future = ( 1 - biopars.R_growth ) .* ( photosynth_tem_future - R_leaf_tem_future ) .* currentcull;
+    NPP_bor_future = ( 1 - biopars.R_growth ) .* ( photosynth_bor_future - R_leaf_bor_future ) .* currentcull;
+    NPP_tro_future = ( 1 - biopars.R_growth ) .* ( photosynth_tro_future - R_leaf_tro_future ) .* currentcull;
 
     %%% Biomass
-    biomass_tem_past = biomass_tem_past + ( C_leaf_tem_past - turnover * biomass_tem_past) * biopars.dt .* currentcull ; 
-    biomass_bor_past = biomass_bor_past + ( C_leaf_bor_past - turnover * biomass_bor_past ) * biopars.dt .* currentcull  ; 
-    biomass_tro_past = biomass_tro_past+ ( C_leaf_tro_past - turnover * biomass_tro_past ) * biopars.dt .* currentcull ; 
-    biomass_tem_future = biomass_tem_future + ( C_leaf_tem_future - turnover * biomass_tem_future ) * biopars.dt .* currentcull ;
-    biomass_bor_future = biomass_bor_future + ( C_leaf_bor_future - turnover * biomass_bor_future ) * biopars.dt .* currentcull ;
-    biomass_tro_future = biomass_tro_future + ( C_leaf_tro_future - turnover * biomass_tro_future ) * biopars.dt .* currentcull ;
-
+    biomass_tem_past = biomass_tem_past + ( C_leaf_tem_past - turnover * biomass_tem_past) * biopars.dt ; 
+    biomass_bor_past = biomass_bor_past + ( C_leaf_bor_past - turnover * biomass_bor_past ) * biopars.dt ; 
+    biomass_tro_past = biomass_tro_past+ ( C_leaf_tro_past - turnover * biomass_tro_past ) * biopars.dt ; 
+    biomass_tem_future = biomass_tem_future + ( C_leaf_tem_future - turnover * biomass_tem_future ) * biopars.dt ;
+    biomass_bor_future = biomass_bor_future + ( C_leaf_bor_future - turnover * biomass_bor_future ) * biopars.dt ;
+    biomass_tro_future = biomass_tro_future + ( C_leaf_tro_future - turnover * biomass_tro_future ) * biopars.dt ;
+    
+    biomasstocull=max( biomass_tem_past, max( biomass_bor_past, biomass_tro_past ));
     final_biomass_past = max( biomass_tem_past, max( biomass_bor_past, biomass_tro_past ) ) .* currentcull  ;
     final_biomass_future = max( biomass_tem_future, max( biomass_bor_future, biomass_tro_future ) ) .* currentcull  ; 
 %     NPP_past = max( NPP_tem_past, max( NPP_bor_past, NPP_tro_past ) ) * EVO ; 
@@ -475,34 +479,21 @@ for i = 1 : 40
        else
            NPP_future( i, j ) = NaN ; 
        end
-       %%%%%%% Calculate the culling effects of an asteroid
-       final_biomass_past(i,j)=(final_biomass_past(i,j));
-       final_biomass_future(i,j)=(final_biomass_future(i,j));
     end
 end
 f_biota_past = 0.0005 * NPP_past * EVO + ( biopars.minbiota * RCO2 ^ 0.25 ) ; 
 f_biota_future = 0.0005 * NPP_future * EVO + ( biopars.minbiota * RCO2 ^ 0.25 ) ; 
-
-if (t_geol*1.005<=timetoinject)&&(t_geol*0.9995>=timetoinject)
-    burntmaterial=(workingstate.biomass.*(1-currentcull));
-    disp(sum(sum(burntmaterial .* ( GRID_AREA_km2 * 1e6 ), 'omitnan')))
-else
-    burntmaterial=0;
-end
 f_biota_past( land_past == 1 & isnan( f_biota_past ) ) = biopars.minbiota .* RCO2 ^ 0.25  ;
-f_biota_future( land_future == 1 & isnan( f_biota_future ) ) = biopars.minbiota .* RCO2 ^ 0.25 ; 
-biohistories=[biohistories;final_biomass_past];
-biotimes=[biotimes,t_geol];
-
+f_biota_future( land_future == 1 & isnan( f_biota_future ) ) = biopars.minbiota .* RCO2 ^ 0.25 ;
 %%%%%%% Mass of biosphere
 VEG = biomass_tot( end ) / 4.53e17 ; 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%   SMITE CONTINUED   %%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-firecarbon=0;%((sum(sum( sum( burntmaterial .* ( GRID_AREA_km2 * 1e6 ), 'omitnan' ) )))/2400);%*interp1([pars.whenstart 1.01*timetoinject 1.005*timetoinject timetoinject 0.995*timetoinject 0.99*timetoinject pars.whenend],[0 0 0.1 1 0.1 0 0],t_geol);
-%*interp1([-70 -66.2 -66.1 -66 -65.9 -65.8 -60],[0 0 1 1 1 0 0],t_geol);
-dl13c_firecarbon=-5;
+toburn=biomasstocull;
+biohistories(:,:,end+1)=final_biomass_past;
+biotimes(end+1)=t_geol;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%   Spatial silicate weathering   %%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -723,10 +714,10 @@ reductant_input = pars.k_reductant_input * DEGASS ;
 dy(1) = psea - mopb - capb - fepb ;
 
 %%% Oxygen
-dy(2) = locb + mocb - oxidw  - ocdeg  + 2*(mpsb - pyrw  - pyrdeg) - reductant_input ;
+dy(2) = locb + mocb - oxidw  - ocdeg  + 2*(mpsb - pyrw  - pyrdeg) - reductant_input;
 
-%%% Carbon dioxide
-dy(3) = -locb - mocb + oxidw + ocdeg + ccdeg + carbw - mccb - sfw  + reductant_input + firecarbon ;
+%%% Carbon dioxide in total hydrosphere
+dy(3) = -locb - mocb + oxidw + ocdeg + ccdeg + carbw - mccb - sfw  + reductant_input;
 
 %%% Sulphate
 dy(4) = gypw + pyrw - mgsb - mpsb + gypdeg + pyrdeg ;
@@ -745,6 +736,9 @@ dy(8) = mgsb - gypw - gypdeg ;
 
 %%%% Nitrate
 dy(11) = nfix - denit - monb;
+
+%%% Carbon dioxide in atmosphere only
+dy(22)=dy(3)*(atfrac/atfrac0);
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%   Isotope reservoirs  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -775,12 +769,10 @@ dy(14) =  mpsb*( delta_mpsb )  - pyrw*delta_PYR  - pyrdeg*delta_PYR ;
 dy(15) =  mgsb*d34s_S   - gypw*delta_GYP  - gypdeg*delta_GYP ;
 
 %%% delta_A * A
-dy(16) = -locb*(  delta_locb ) -mocb*( delta_mocb ) + oxidw*delta_G + ocdeg*delta_G + ccdeg*delta_C + carbw*delta_C - mccb*delta_mccb - sfw*delta_mccb + reductant_input*-5 + firecarbon*dl13c_firecarbon;% +noise*dl13c_firecarbon;
+dy(16) = -locb*(  delta_locb ) -mocb*( delta_mocb ) + oxidw*delta_G + ocdeg*delta_G + ccdeg*delta_C + carbw*delta_C - mccb*delta_mccb - sfw*delta_mccb + reductant_input*-5 ;%+ firecarbon*dl13c_firecarbon;% +noise*dl13c_firecarbon;
 
 %%% delta_S * S
 dy(17) = gypw*delta_GYP + pyrw*delta_PYR -mgsb*d34s_S - mpsb*( delta_mpsb ) + gypdeg*delta_GYP + pyrdeg*delta_PYR ; 
-
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%   Strontium system   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

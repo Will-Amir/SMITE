@@ -21,7 +21,8 @@ function run = SCIFI_initialise_clean(runcontrol)
     clear switches
     clear state
     clear rawoutput
-    clear options
+    clear options_long
+    clear options_short
     clear geoldata
     clear rawoutput
     clear resample
@@ -52,6 +53,12 @@ function run = SCIFI_initialise_clean(runcontrol)
     global seeding_primer
     global biohistories
     global biotimes
+    global mass
+    global prevfirecarbon
+    global burntime
+    global burnflag
+    global toburn
+    global Crelease
     
     %%%%%%% global tuning variables
     global Gtune
@@ -83,6 +90,9 @@ function run = SCIFI_initialise_clean(runcontrol)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%   Flux values at present   %%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    
+    %%%%%%% Atmospheric fraction of hydrosphere
+    atfrac0 = 0.01614 ; % constant
 
     %%%%%%% reductant input
     pars.k_reductant_input = 0.4e12 ; % schopf and klein 1992
@@ -161,6 +171,7 @@ function run = SCIFI_initialise_clean(runcontrol)
     pars.N0 = 4.35e16 ;
     pars.OSr0 = 1.2e17 ; % francois and walker 1992
     pars.SSr0 = 5e18 ;
+    pars.atmoA0 = pars.A0*atfrac0 ;
 
     %%%%%% loading parameters for biomass calculations
     biopars.dt = 1 ;
@@ -290,13 +301,19 @@ function run = SCIFI_initialise_clean(runcontrol)
 
     %%%%%%% impactor event properties (0 = present day)
     random_impactor_flag=0; % decides whether to randomly generate asteroids or if discerete asteroids should be used (0 is discrete, 1 is random)
+    timetosimasteroid=1000; % sets how long after asteroid impact to simulate at high fidelity
     if random_impactor_flag==0
         asteroidtimes=[-67]; %Choose when in Myr to inject asteroids
         lats=[19]; %Choose asteroid latitudes
         longs=[13]; %Choose asteroid longitudes
-        powers=[80]; %Choose asteroid powers
+        powers=[100]; %Choose asteroid powers
+        mass=[1e18]; %Choose asteroid masses in grams
         culledmaterial = ones(40,48) ;
         timetoinject=asteroidtimes(1);
+        prevfirecarbon=0;
+        burntime=0;
+        burnflag=0;
+        valstorun=[asteroidtimes(1),lats(1),longs(1),powers(1),mass(1)];
     else
         numasteroids=1; %Choose number of random asteroids
         timetoinject=-60e6; %Choose when to inject asteroids
@@ -304,6 +321,9 @@ function run = SCIFI_initialise_clean(runcontrol)
     
     %%% Set seeding_primer to 0 for carrying forward biomass and 1 for reseeding
     seeding_primer=0;
+
+    %%% Integration method, set to 0 for continuous integration and 1 for step
+    stepflag=1;
 
     %%%%%%% setp up grid stamp times
     if runcontrol == -2
@@ -325,7 +345,9 @@ function run = SCIFI_initialise_clean(runcontrol)
     pars.display_resolution = 200 ;
 
     %%%%%%% set maximum step size for solver
-    options = odeset('maxstep',1e6) ;
+    options_long = odeset('maxstep',1e6) ;
+    options_short = odeset('MaxStep',1) ;
+
 
     %%%%%%% set stepnumber to 1
     stepnumber = 1 ;
@@ -399,14 +421,27 @@ function run = SCIFI_initialise_clean(runcontrol)
     pars.startstate(19) = pars.OSr_start * pars.delta_OSr_start ;
     pars.startstate(20) = pars.SSr_start ;
     pars.startstate(21) = pars.SSr_start * pars.delta_SSr_start ;
+    pars.startstate(22) = pars.atmoA0 ;
     
     
     %%%%%%% note model start time
     tic
 
     %%%%%%% run the system 
-    [rawoutput.T,rawoutput.Y] = ode15s(@SCIFI_equations2,[pars.whenstart pars.whenend],pars.startstate,options);
-    
+    if stepflag==0
+        [rawoutput.T,rawoutput.Y] = ode15s(@SCIFI_equations2,[pars.whenstart pars.whenend],pars.startstate,options_long);
+    elseif stepflag==1
+        timetostartinject=timetoinject*1e6;
+        timetoendinject=timetostartinject+timetosimasteroid;
+        [rawoutput.T_init,rawoutput.Y_init] = ode15s(@SCIFI_equations2, [pars.whenstart,timetostartinject],pars.startstate,options_long);
+        SMITE
+        %disp(Crelease)
+        %rawoutput.Y_init(end,2)=rawoutput.Y_init(end,2)-Crelease;
+        rawoutput.Y_init(end,22)=rawoutput.Y_init(end,22)+Crelease;
+        [rawoutput.T_during,rawoutput.Y_during] = ode15s(@SCIFI_equations2, [timetostartinject,timetoendinject],rawoutput.Y_init(end,:),options_short);
+        [rawoutput.T_post,rawoutput.Y_post] = ode15s(@SCIFI_equations2, [timetoendinject,pars.whenend],rawoutput.Y_during(end,:),options_long);
+        rawoutput.T=[rawoutput.T_init; rawoutput.T_during; rawoutput.T_post];
+    end
     if runcontrol==-3
         FLORA_test
             run.singlerun = singlerun ; 
