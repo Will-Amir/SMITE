@@ -1,7 +1,7 @@
 %%plotting script
 
 %download m_proj
-
+global biohistories
 land = double(land_past) ; 
 land(land ==0) = NaN ; 
 
@@ -10,20 +10,13 @@ subplot(2,3,1)
 a = pcolor(INTERPSTACK.lon,INTERPSTACK.lat,circshift( land, [0 20])) ;
 a.EdgeColor = "none" ; 
 hold on
-a = pcolor(INTERPSTACK.lon,INTERPSTACK.lat,circshift(final_biomass_past, [0 20])) ;
+cmap=parula(max(max(biohistories(:,:,end)))+1);
+cmap(1,:)=[1,0,0];
+a = pcolor(INTERPSTACK.lon,INTERPSTACK.lat,circshift(biohistories(:,:,end), [0 20])) ;
+colormap(cmap)
 a.EdgeColor = "none" ; 
 colorbar
 title('Biomass (gC/m^{2})')
-hold off
-
-subplot(2,3,2)
-a = pcolor(INTERPSTACK.lon,INTERPSTACK.lat,circshift( land, [0 20])) ;
-a.EdgeColor = "none" ; 
-hold on
-a = pcolor(INTERPSTACK.lon,INTERPSTACK.lat,circshift(NPP_past .* land, [0 20])) ;
-a.EdgeColor = "none" ; 
-colorbar
-title('NPP (gC/m^{2}/year)')
 hold off
 
 subplot(2,3,3)

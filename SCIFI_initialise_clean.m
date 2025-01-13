@@ -42,24 +42,12 @@ function run = SCIFI_initialise_clean(runcontrol)
     global plotrun
     global sensparams
     global biopars
-    global random_impactor_flag
-    global asteroidtimes
-    global lats
-    global longs
-    global powers
-    global numasteroids
-    global timetoinject
+    global SMITE_asteroidparams
     global culledmaterial
     global seeding_primer
-    global biohistories
-    global biotimes
-    global mass
-    global prevfirecarbon
-    global burntime
-    global burnflag
-    global toburn
     global Crelease
-    
+    global growthmap
+
     %%%%%%% global tuning variables
     global Gtune
     global Ctune
@@ -301,19 +289,15 @@ function run = SCIFI_initialise_clean(runcontrol)
 
     %%%%%%% impactor event properties (0 = present day)
     random_impactor_flag=0; % decides whether to randomly generate asteroids or if discerete asteroids should be used (0 is discrete, 1 is random)
-    timetosimasteroid=1000; % sets how long after asteroid impact to simulate at high fidelity
+    timetosimasteroid=5000; % sets how long after asteroid impact to simulate at high fidelity
     if random_impactor_flag==0
-        asteroidtimes=[-67]; %Choose when in Myr to inject asteroids
-        lats=[19]; %Choose asteroid latitudes
-        longs=[13]; %Choose asteroid longitudes
-        powers=[100]; %Choose asteroid powers
-        mass=[1e18]; %Choose asteroid masses in grams
+        SMITE_asteroidparams(1)=-67; %Choose when in Myr to inject asteroid
+        SMITE_asteroidparams(2)=19; %Choose asteroid latitude
+        SMITE_asteroidparams(3)=13; %Choose asteroid longitude
+        SMITE_asteroidparams(4)=100; %Choose asteroid power
+        SMITE_asteroidparams(5)=1e18; %Choose asteroid mass in grams
         culledmaterial = ones(40,48) ;
-        timetoinject=asteroidtimes(1);
-        prevfirecarbon=0;
-        burntime=0;
-        burnflag=0;
-        valstorun=[asteroidtimes(1),lats(1),longs(1),powers(1),mass(1)];
+        growthmap=zeros(40,48);
     else
         numasteroids=1; %Choose number of random asteroids
         timetoinject=-60e6; %Choose when to inject asteroids
@@ -429,17 +413,16 @@ function run = SCIFI_initialise_clean(runcontrol)
 
     %%%%%%% run the system 
     if stepflag==0
-        [rawoutput.T,rawoutput.Y] = ode15s(@SCIFI_equations2,[pars.whenstart pars.whenend],pars.startstate,options_long);
+        [rawoutput.T,rawoutput.Y] = ode15s(@SCIFI_equations_standard,[pars.whenstart pars.whenend],pars.startstate,options_long);
     elseif stepflag==1
-        timetostartinject=timetoinject*1e6;
+        timetostartinject=SMITE_asteroidparams(1)*1e6;
         timetoendinject=timetostartinject+timetosimasteroid;
-        [rawoutput.T_init,rawoutput.Y_init] = ode15s(@SCIFI_equations2, [pars.whenstart,timetostartinject],pars.startstate,options_long);
+        [rawoutput.T_init,rawoutput.Y_init] = ode15s(@SCIFI_equations_split, [pars.whenstart,timetostartinject],pars.startstate,options_long);
         SMITE
-        %disp(Crelease)
-        %rawoutput.Y_init(end,2)=rawoutput.Y_init(end,2)-Crelease;
-        rawoutput.Y_init(end,22)=rawoutput.Y_init(end,22)+Crelease;
-        [rawoutput.T_during,rawoutput.Y_during] = ode15s(@SCIFI_equations2, [timetostartinject,timetoendinject],rawoutput.Y_init(end,:),options_short);
-        [rawoutput.T_post,rawoutput.Y_post] = ode15s(@SCIFI_equations2, [timetoendinject,pars.whenend],rawoutput.Y_during(end,:),options_long);
+        %rawoutput.Y_init(end,22)=rawoutput.Y_init(end,22)+Crelease;
+        [rawoutput.T_during,rawoutput.Y_during] = ode15s(@SCIFI_equations_regrowth, [timetostartinject,timetoendinject],rawoutput.Y_init(end,:),options_short);
+        plot_script
+        [rawoutput.T_post,rawoutput.Y_post] = ode15s(@SCIFI_equations_split, [timetoendinject,pars.whenend],rawoutput.Y_during(end,:),options_long);
         rawoutput.T=[rawoutput.T_init; rawoutput.T_during; rawoutput.T_post];
     end
     if runcontrol==-3
