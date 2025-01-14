@@ -328,7 +328,6 @@ biomass_tro_future=biomasstocarry;
 if t_geol>=timetoinject %Time to regrow plant material as a hard limit on max possible plants
    currentcull(growthmap~=0)=culledmaterial(growthmap~=0)+((t_geol-growthmap(growthmap~=0))*1000);
    currentcull(currentcull>1)=1;
-   disp(currentcull)
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -472,7 +471,7 @@ for count = 1:length(potentialgrowth)
 end
 biohistories(:,:,end+1)=final_biomass_past;
 biotimes(end+1)=t_geol;
-
+live_biomass_plot
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%   Spatial silicate weathering   %%%%%%%%%%%%%%%%%%%
