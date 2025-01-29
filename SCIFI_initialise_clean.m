@@ -29,6 +29,14 @@ function run = SCIFI_initialise_clean(runcontrol)
     clear biopars
     clear biohistories
     clear biotimes
+    clear SMITE_asteroidparams
+    clear culledmaterial
+    clear Crelease
+    clear growthmap
+    clear seeding_primer
+    clear atmoCO2
+    clear toburn
+    clear biomasstocarry
 
     %%%%%%% set up global structures
     global stepnumber
@@ -47,6 +55,7 @@ function run = SCIFI_initialise_clean(runcontrol)
     global seeding_primer
     global Crelease
     global growthmap
+    global atmoCO2
 
     %%%%%%% global tuning variables
     global Gtune
@@ -284,14 +293,14 @@ function run = SCIFI_initialise_clean(runcontrol)
     end
 
     %%%%%%% model timeframe in years (0 = present day)
-    pars.whenstart = - 70e6 ;
-    pars.whenend = -60e6 ;
+    pars.whenstart = -70e6 ;
+    pars.whenend = -65e6 ;
 
     %%%%%%% impactor event properties (0 = present day)
     random_impactor_flag=0; % decides whether to randomly generate asteroids or if discerete asteroids should be used (0 is discrete, 1 is random)
-    timetosimasteroid=5000; % sets how long after asteroid impact to simulate at high fidelity
+    timetosimasteroid=50000; % sets how long after asteroid impact to simulate at high fidelity
     if random_impactor_flag==0
-        SMITE_asteroidparams(1)=-67; %Choose when in Myr to inject asteroid
+        SMITE_asteroidparams(1)=-66.04; %Choose when in Myr to inject asteroid
         SMITE_asteroidparams(2)=19; %Choose asteroid latitude
         SMITE_asteroidparams(3)=13; %Choose asteroid longitude
         SMITE_asteroidparams(4)=100; %Choose asteroid power
@@ -329,7 +338,7 @@ function run = SCIFI_initialise_clean(runcontrol)
     pars.display_resolution = 200 ;
 
     %%%%%%% set maximum step size for solver
-    options_long = odeset('maxstep',1e6) ;
+    options_long = odeset('maxstep',1e5) ;
     options_short = odeset('MaxStep',1) ;
 
 
@@ -418,8 +427,12 @@ function run = SCIFI_initialise_clean(runcontrol)
         timetostartinject=SMITE_asteroidparams(1)*1e6;
         timetoendinject=timetostartinject+timetosimasteroid;
         [rawoutput.T_init,rawoutput.Y_init] = ode15s(@SCIFI_equations_split, [pars.whenstart,timetostartinject],pars.startstate,options_long);
+        atmoCO2=rawoutput.Y_init(end,22);
         SMITE
-        %rawoutput.Y_init(end,22)=rawoutput.Y_init(end,22)+Crelease;
+        rawoutput.Y_init(end,3)=rawoutput.Y_init(end,3)+(Crelease);
+        %disp(rawoutput.Y_init(end,16))
+        %disp(rawoutput.Y_init(end,3))
+        %rawoutput.Y_init(end,16)=rawoutput.Y_init(end,16)+;
         [rawoutput.T_during,rawoutput.Y_during] = ode15s(@SCIFI_equations_regrowth, [timetostartinject,timetoendinject],rawoutput.Y_init(end,:),options_short);
         plot_script
         [rawoutput.T_post,rawoutput.Y_post] = ode15s(@SCIFI_equations_split, [timetoendinject,pars.whenend],rawoutput.Y_during(end,:),options_long);

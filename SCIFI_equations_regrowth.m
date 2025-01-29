@@ -215,6 +215,7 @@ TEMP_gast = Tsurf ;
 %%% Reassign global varaibles
 timetoinject=SMITE_asteroidparams(1)*1e6;
 currentcull=culledmaterial;
+regrowthdt=1/12;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%   FLORA - Fast Land Occupant Reaction Alogrithm   %%%%%%%%
@@ -340,7 +341,8 @@ n = 1 ;
 %%%%%%% Turnover changes between 8% and 20% depending on O2
 turnover = min( max( 0.0092 *( mrO2 * 100 - 10 ), 0.08 ), 0.2 ) ; 
 
-while abs( biomass_change_final_step ) > 0.0000000000000001
+%while abs( biomass_change_final_step ) > 0.0000000000000001
+for regrowthcount = 1:12
 
     %%% Leaf respiration per plant type
     R_leaf_tem_past = biopars.r_tem * ( C_leaf_tem_past / biopars.CN_leaf ) .* g_T_past ;
@@ -365,12 +367,12 @@ while abs( biomass_change_final_step ) > 0.0000000000000001
     NPP_tro_future = ( 1 - biopars.R_growth ) .* ( photosynth_tro_future - R_leaf_tro_future ) .* currentcull;
 
     %%% Biomass
-    biomass_tem_past = biomass_tem_past + ( C_leaf_tem_past - turnover * biomass_tem_past) * biopars.dt ; 
-    biomass_bor_past = biomass_bor_past + ( C_leaf_bor_past - turnover * biomass_bor_past ) * biopars.dt ; 
-    biomass_tro_past = biomass_tro_past+ ( C_leaf_tro_past - turnover * biomass_tro_past ) * biopars.dt ; 
-    biomass_tem_future = biomass_tem_future + ( C_leaf_tem_future - turnover * biomass_tem_future ) * biopars.dt ;
-    biomass_bor_future = biomass_bor_future + ( C_leaf_bor_future - turnover * biomass_bor_future ) * biopars.dt ;
-    biomass_tro_future = biomass_tro_future + ( C_leaf_tro_future - turnover * biomass_tro_future ) * biopars.dt ;
+    biomass_tem_past = biomass_tem_past + ( C_leaf_tem_past - turnover * biomass_tem_past) * regrowthdt ; 
+    biomass_bor_past = biomass_bor_past + ( C_leaf_bor_past - turnover * biomass_bor_past ) * regrowthdt ; 
+    biomass_tro_past = biomass_tro_past+ ( C_leaf_tro_past - turnover * biomass_tro_past ) * regrowthdt ; 
+    biomass_tem_future = biomass_tem_future + ( C_leaf_tem_future - turnover * biomass_tem_future ) * regrowthdt ;
+    biomass_bor_future = biomass_bor_future + ( C_leaf_bor_future - turnover * biomass_bor_future ) * regrowthdt ;
+    biomass_tro_future = biomass_tro_future + ( C_leaf_tro_future - turnover * biomass_tro_future ) * regrowthdt ;
     
     biomasstocull=max( biomass_tem_past, max( biomass_bor_past, biomass_tro_past ));
     final_biomass_past = max( biomass_tem_past, max( biomass_bor_past, biomass_tro_past ) ) .* currentcull  ;
@@ -461,17 +463,30 @@ for count = 1:length(potentialgrowth)
     end
     summedsurroundingprobs=sum((currentcull(tochecky,tocheckx)),"all");
     growthspread=summedsurroundingprobs*100;
-    growthcheck=randi(80000);
+    growthcheck=randi(160000);
     if growthspread>=growthcheck
         if currentcull(growthcelly,growthcellx)==0
-            culledmaterial(growthcelly,growthcellx)=0.01;
+            culledmaterial(growthcelly,growthcellx)=0.001;
             growthmap(growthcelly,growthcellx)=t_geol;
         end
     end
 end
+%RANDOMISED SEED DISPERSAL
+randomgrowth=find(land_past==1 & currentcull==0);
+for count = 1:length(randomgrowth)
+    growthcell=randomgrowth(count);
+    growthcheck=randi(10000000);
+    if growthcheck<=10
+        culledmaterial(growthcell)=0.001;
+        growthmap(growthcell)=t_geol;
+    end
+end
+
 biohistories(:,:,end+1)=final_biomass_past;
 biotimes(end+1)=t_geol;
-live_biomass_plot
+biomasstocarry=final_biomass_past;
+%live_biomass_plot
+%biomass_spread_plot
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%   Spatial silicate weathering   %%%%%%%%%%%%%%%%%%%

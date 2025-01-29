@@ -350,17 +350,17 @@ if seeding_primer == 0
         biomass_bor_future=prevstate;
         biomass_tro_future=prevstate;
     else
-        biomass_tem_past( :, :, 1 ) = 2.5e1*land_past;
+        biomass_tem_past( :, :, 1 ) = 2.5e4*land_past;
         biomass_tem_past( biomass_tem_past == 0 ) = NaN ; 
-        biomass_bor_past( :, :, 1 ) = 2.5e1*land_past; 
+        biomass_bor_past( :, :, 1 ) = 2.5e4*land_past; 
         biomass_bor_past( biomass_bor_past == 0 ) = NaN ; 
-        biomass_tro_past( :, :, 1 ) = 2.5e1*land_past; 
+        biomass_tro_past( :, :, 1 ) = 2.5e4*land_past; 
         biomass_tro_past( biomass_tro_past == 0 ) = NaN ;  
-        biomass_tem_future( :, :, 1 ) = 2.5e1*land_future;
+        biomass_tem_future( :, :, 1 ) = 2.5e4*land_future;
         biomass_tem_future( biomass_tem_future == 0 ) = NaN ; 
-        biomass_bor_future( :, :, 1 ) = 2.5e1*land_future;
+        biomass_bor_future( :, :, 1 ) = 2.5e4*land_future;
         biomass_bor_future( biomass_bor_future == 0 ) = NaN ; 
-        biomass_tro_future( :, :, 1 ) = 2.5e1*land_future; 
+        biomass_tro_future( :, :, 1 ) = 2.5e4*land_future; 
         biomass_tro_future( biomass_tro_future == 0 ) = NaN ;
     end
 else
@@ -395,7 +395,7 @@ n = 1 ;
 turnover = min( max( 0.0092 *( mrO2 * 100 - 10 ), 0.08 ), 0.2 ) ; 
 
 while abs( biomass_change_final_step ) > 0.0000000000000001
-
+%for plantgrowth=1:1000
     %%% Leaf respiration per plant type
     R_leaf_tem_past = biopars.r_tem * ( C_leaf_tem_past / biopars.CN_leaf ) .* g_T_past ;
     R_leaf_bor_past = biopars.r_bor * ( C_leaf_bor_past / biopars.CN_leaf ) .* g_T_past ;
@@ -452,17 +452,19 @@ end
 %%%%%%% Calculating effect of biomass on weathering
 for i = 1 : 40
     for j = 1 : 48
-       %%%%%%% Mild random biomass reduction effects
        %1 = temperate, 2 = boreal, 3 = tropical, 4 = ice/desert
        if final_biomass_past ( i , j ) == biomass_tem_past( i , j ) * EVO
             biome( i , j ) = 1 ; 
            NPP_past(i,j) = NPP_tem_past(i,j); 
+           biomasstocull(i,j)=biomasstocull(i,j).*(100/90);
        elseif final_biomass_past(i,j) == biomass_bor_past( i , j ) * EVO
             biome( i , j ) = 2 ; 
            NPP_past(i,j) = NPP_bor_past(i,j);
+           biomasstocull(i,j)=biomasstocull(i,j).*(100/78);
        elseif final_biomass_past(i,j) == biomass_tro_past( i , j ) * EVO
             biome( i , j ) = 3 ;
            NPP_past(i,j) = NPP_tro_past(i,j); 
+           biomasstocull(i,j)=biomasstocull(i,j).*(100/99);
        else
             biome( i , j ) = 4 ; 
            NPP_past(i,j) = NaN ; 
