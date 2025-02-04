@@ -429,7 +429,7 @@ function run = SCIFI_initialise_clean(runcontrol)
         [rawoutput.T_init,rawoutput.Y_init] = ode15s(@SCIFI_equations_split, [pars.whenstart,timetostartinject],pars.startstate,options_long);
         atmoCO2=rawoutput.Y_init(end,22);
         SMITE
-        rawoutput.Y_init(end,3)=rawoutput.Y_init(end,3)+(Crelease);
+        rawoutput.Y_init(end,22)=rawoutput.Y_init(end,22)+(Crelease*0.43);
         %disp(rawoutput.Y_init(end,16))
         %disp(rawoutput.Y_init(end,3))
         %rawoutput.Y_init(end,16)=rawoutput.Y_init(end,16)+;
