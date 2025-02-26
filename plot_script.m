@@ -16,6 +16,8 @@ a = pcolor(INTERPSTACK.lon,INTERPSTACK.lat,circshift(biohistories(:,:,end), [0 2
 colormap(cmap)
 a.EdgeColor = "none" ; 
 colorbar
+%txt = ['Year: ' num2str(t_geol*1e6)];
+%text(0,0,txt,'FontSize',16)
 title('Biomass (gC/m^{2})')
 hold off
 

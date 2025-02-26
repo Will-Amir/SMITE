@@ -91,15 +91,20 @@ culledmaterial(land_past==1)=1;
 culledmaterial(truefires==1 & struck==0)=0.5;
 culledmaterial(struck==1 & truefires==1)=0;
 culledmaterial(land_past==0)=0;
-%{
 for i = 1 : 40
     for j = 1 : 48
         if culledmaterial(i,j)~=0
-            culledmaterial(i,j)=culledmaterial(i,j)-(randi(200)/1e3);
+            tocull=randi(200);
+            if tocull>100
+                tocull=tocull-100;
+            else
+                tocull=-tocull;
+            end
+            tocull=tocull/1000;
+            culledmaterial(i,j)=culledmaterial(i,j)+tocull;
         end
     end
 end
-%}
 culledmaterial(culledmaterial<0)=0;
 totalprevbiomass=(sum( sum( toburn .* ( GRID_AREA_km2 * 1e6 ), 'omitnan' )));
 %plantgridarea(land_past==0)=0;
@@ -108,9 +113,9 @@ burntmaterial=(toburn.*(1-culledmaterial));
 biomasstocarry=toburn.*culledmaterial;
 charcoalmaterial=(sum( sum( biomasstocarry .* ( GRID_AREA_km2 * 1e6 ), 'omitnan' )))*(1/3);
 Crelease=(sum( sum( burntmaterial .* ( GRID_AREA_km2 * 1e6 ), 'omitnan' ))/12);
-%disp(Crelease*12*0.03)
-%disp(charcoalmaterial)
-
+aciniformcarbonquant=Crelease*12*0.03;
+carbonvals=[Crelease*0.43 aciniformcarbonquant charcoalmaterial];
+writematrix(carbonvals,"carbonoutput.csv")
 culledmaterial(culledmaterial~=0)=0;
 %culledmaterial(topologymap>1e3)=0.001;
 culledmaterial(runoffmap>1.2e3)=0.001;

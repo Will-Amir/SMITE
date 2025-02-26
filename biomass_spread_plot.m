@@ -11,3 +11,4 @@ title('Biomass spread map');
 set(b, 'CData', circshift(culledmaterial, [0 20]));
 colorbar
 drawnow
+%exportgraphics(gca,"grwothspread.gif","Append",true)

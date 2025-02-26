@@ -374,7 +374,6 @@ for regrowthcount = 1:12
     biomass_bor_future = biomass_bor_future + ( C_leaf_bor_future - turnover * biomass_bor_future ) * regrowthdt ;
     biomass_tro_future = biomass_tro_future + ( C_leaf_tro_future - turnover * biomass_tro_future ) * regrowthdt ;
     
-    biomasstocull=max( biomass_tem_past, max( biomass_bor_past, biomass_tro_past ));
     final_biomass_past = max( biomass_tem_past, max( biomass_bor_past, biomass_tro_past ) ) .* currentcull  ;
     final_biomass_future = max( biomass_tem_future, max( biomass_bor_future, biomass_tro_future ) ) .* currentcull  ; 
 %     NPP_past = max( NPP_tem_past, max( NPP_bor_past, NPP_tro_past ) ) * EVO ; 
