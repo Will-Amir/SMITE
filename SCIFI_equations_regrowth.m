@@ -327,7 +327,7 @@ biomass_bor_future=biomasstocarry;
 biomass_tro_future=biomasstocarry;
 
 if t_geol>=timetoinject %Time to regrow plant material as a hard limit on max possible plants
-   currentcull(growthmap~=0)=culledmaterial(growthmap~=0)+((t_geol-growthmap(growthmap~=0))*1000);
+   currentcull(growthmap~=0)=culledmaterial(growthmap~=0)+((t_geol-growthmap(growthmap~=0))*10);
    currentcull(currentcull>1)=1;
 end
 

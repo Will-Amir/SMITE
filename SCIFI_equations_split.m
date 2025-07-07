@@ -30,6 +30,7 @@ global biohistories
 global biotimes
 global toburn
 global biomasstocarry
+global atmoCO2
 
 %%%%%%% get variables from Y to make working easier
 P = y(1) ;
@@ -62,6 +63,7 @@ atfrac = atfrac0 * (atmoA/pars.atmoA0) ; % variable
 RCO2 = (atmoA/pars.atmoA0)*(atfrac/atfrac0) ;
 CO2atm = RCO2*(280e-6) ;
 CO2ppm = RCO2*280 ;
+atmoCO2=CO2ppm;
 %%%%%%% mixing ratio of oxygen (not proportional to O reservoir)
 mrO2 = ( O/pars.O0 )  /   ( (O/pars.O0)  + pars.copsek16 ) ;
 %%%%%%% relative moles of oxygen 

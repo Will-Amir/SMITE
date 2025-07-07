@@ -298,9 +298,9 @@ function run = SCIFI_initialise_clean(runcontrol)
 
     %%%%%%% impactor event properties (0 = present day)
     random_impactor_flag=0; % decides whether to randomly generate asteroids or if discerete asteroids should be used (0 is discrete, 1 is random)
-    timetosimasteroid=50000; % sets how long after asteroid impact to simulate at high fidelity
+    timetosimasteroid=1000000; % sets how long after asteroid impact to simulate at high fidelity
     if random_impactor_flag==0
-        SMITE_asteroidparams(1)=-66.04; %Choose when in Myr to inject asteroid
+        SMITE_asteroidparams(1)=-66.4; %Choose when in Myr to inject asteroid
         SMITE_asteroidparams(2)=19; %Choose asteroid latitude
         SMITE_asteroidparams(3)=13; %Choose asteroid longitude
         SMITE_asteroidparams(4)=100; %Choose asteroid power
@@ -355,7 +355,7 @@ function run = SCIFI_initialise_clean(runcontrol)
     pars.delta_A_start = 0 ;
     pars.delta_S_start = 35 ;
     pars.delta_G_start = -27 ;
-    pars.delta_C_start = -2 ;
+    pars.delta_C_start = -4 ;
     pars.delta_PYR_start = -5 ;
     pars.delta_GYP_start = 20 ;
     pars.delta_OSr_start = 0.708 ;
@@ -427,7 +427,6 @@ function run = SCIFI_initialise_clean(runcontrol)
         timetostartinject=SMITE_asteroidparams(1)*1e6;
         timetoendinject=timetostartinject+timetosimasteroid;
         [rawoutput.T_init,rawoutput.Y_init] = ode15s(@SCIFI_equations_split, [pars.whenstart,timetostartinject],pars.startstate,options_long);
-        atmoCO2=rawoutput.Y_init(end,22);
         SMITE
         rawoutput.Y_init(end,22)=rawoutput.Y_init(end,22)+(Crelease*0.43);
         %disp(rawoutput.Y_init(end,16))
@@ -437,6 +436,7 @@ function run = SCIFI_initialise_clean(runcontrol)
         plot_script
         [rawoutput.T_post,rawoutput.Y_post] = ode15s(@SCIFI_equations_split, [timetoendinject,pars.whenend],rawoutput.Y_during(end,:),options_long);
         rawoutput.T=[rawoutput.T_init; rawoutput.T_during; rawoutput.T_post];
+        rawoutput.Y=[rawoutput.Y_init; rawoutput.Y_during; rawoutput.Y_post];
     end
     if runcontrol==-3
         FLORA_test
@@ -487,6 +487,10 @@ function run = SCIFI_initialise_clean(runcontrol)
         fprintf('time (s): %d \n', endtime )
     end
     
+    %%%%SAVE State
+    %matrixtowrite=[rawoutput.T rawoutput.Y];
+    %writematrix(matrixtowrite,"runoutput.csv")
+    writetable(struct2table(state),"runoutput.csv")
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%   Plotting   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -500,5 +504,11 @@ function run = SCIFI_initialise_clean(runcontrol)
             SCION_plot_fluxes_weathering
         end
     end
+    percentagerecoveryplot
+    movefile runoutput.csv ToProcess/
+    movefile carbonoutput.csv ToProcess/
+    movefile plantgrowth.fig ToProcess/
+    movefile recoveryplots.fig ToProcess/
+    movefile figures.fig ToProcess/
 
 end

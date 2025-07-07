@@ -36,3 +36,5 @@ a.EdgeColor = "none" ;
 colorbar
 title('Wildfire regions')
 hold off
+
+savefig("plantgrowth")

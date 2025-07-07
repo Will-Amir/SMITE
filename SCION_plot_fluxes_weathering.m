@@ -69,6 +69,7 @@ pc6 = [82 56 100]./255 ;
 %%%% load geochem data
 load('data/geochem_data_2020.mat')
 load('data/Scotese_GAT_2021.mat')
+load('data/updated_historical_isotopes.mat')
 
 %%%%%%% make figure
 figure('Color',[1 0.98 0.95])
@@ -236,6 +237,7 @@ xlabel('Time (Ma)')
 ylabel('\delta^{13}C_{carb}')
 %%%% plot data comparison
 plot(d13c_x,d13c_y,'.','color',pc2)
+plot(d13c_x_highfid,d13c_y_highfid,'.','color',"r")
 %%%% plot this model
 plot(state.time_myr,state.delta_mccb,'k')
 
@@ -245,8 +247,10 @@ hold on
 box on
 xlim([pars.whenstart/1e6 pars.whenend/1e6])
 xlabel('Time (Ma)')
+%label("d18O levels")
 ylabel('\delta^{34}S_{sw}')
 %%%% plot data comparison
+%plot(d18o_x_highfid,d18o_y_highfid,'.','color','r')
 plot(d34s_x,d34s_y,'.','color',pc2)
 %%%% plot this model
 plot(state.time_myr,state.d34s_S,'k')
@@ -264,21 +268,21 @@ plot(sr_x,sr_y,'color',pc2)
 %%%% plot this model
 plot(state.time_myr,state.delta_OSr,'k')
 
-%%%% SO4
+%%%% SO4 ##BIOMASS
 subplot(4,4,12)
 hold on
 box on
 xlim([pars.whenstart/1e6 pars.whenend/1e6])
 xlabel('Time (Ma)')
-ylabel('Biomass)')
+ylabel('Biomass')
 %%%% plot algeo data window comparison
-plot(sconc_max_x,sconc_max_y,'color',pc1)
-plot(sconc_min_x,sconc_min_y,'color',pc1)
-plot(sconc_mid_x,sconc_mid_y,'color',pc2)
+%plot(sconc_max_x,sconc_max_y,'color',pc1)
+%plot(sconc_min_x,sconc_min_y,'color',pc1)
+%plot(sconc_mid_x,sconc_mid_y,'color',pc2)
 %%%% plot fluid inclusion data comparison
-for u = 1:2:length(SO4_x-1)
-   plot( [SO4_x(u) SO4_x(u)] , [SO4_y(u) SO4_y(u+1)], 'color' , pc3 ) ;     
-end
+%for u = 1:2:length(SO4_x-1)
+%   plot( [SO4_x(u) SO4_x(u)] , [SO4_y(u) SO4_y(u+1)], 'color' , pc3 ) ;     
+%end
 %%%% plot this model
 plot(state.time_myr,(state.biomass_tot),'k')
 
@@ -339,6 +343,8 @@ ylabel('GAST (C)')
 %%%% plot data comparison
 % patch(T_x,T_y,pc1,'edgecolor','none')
 plot(Scotese_2021_age,Scotese_2021_GAT,'color',pc1)
+plot(d18o_x_highfid,avgsurftemps_highfid,'.','color',"r")
+%plot(d18o_x_highfid,gast_pliocenemetric,'.','color',"g")
 %%%% plot this model
 plot(state.time_myr,state.tempC,'k')
 
@@ -355,6 +361,8 @@ plot(paleolat_x,paleolat_y,'color' ,pc1) ;
 plot(state.time_myr,state.iceline,'k') ;
 ylim([0 90])
 colormap(gca,'gray')
+
+savefig("figures")
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%% Plotting biomass maps %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

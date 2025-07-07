@@ -13,10 +13,10 @@ txt = num2str(t_geol*1e6)+"yr";
 text(325,0,txt,'FontSize',14,'Color',"white")
 colorbar
 drawnow
-if mod(t_geol*1e6,10)==0
+if mod(t_geol*1e6,20)==0
     exportgraphics(gca,"growthspread.gif","Append",true,"Resolution",125)
     checkflag=1;
-elseif rem(t_geol*1e6,10)==0
+elseif rem(t_geol*1e6,20)==0
     if checkflag==0
         exportgraphics(gca,"growthspread.gif","Append",true,"Resolution",125)
         checkflag=1;
